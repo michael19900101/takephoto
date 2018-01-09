@@ -7,4 +7,18 @@
 　　        <item>楼宇照片</item>
 　　        <item>门牌照片</item>
 　　    </string-array>
+　　    <string-array name="wireless_num">
+　　        <item>N000</item>
+　　        <item>N030</item>
+　　        <item>N060</item>
+　　        <item>N090</item>
+　　        <item>N120</item>
+　　        <item>N150</item>
+    　　    <item>N180</item>
+    　　    <item>N210</item>
+    　　    <item>N240</item>
+    　　    <item>N270</item>
+            <item>N300</item>
+    　　    <item>N330</item>
+　　    </string-array>
 </resources>

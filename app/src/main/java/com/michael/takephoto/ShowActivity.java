@@ -11,6 +11,8 @@ import com.michael.takephoto.fragment.DetailSceneFragment;
 import com.michael.takephoto.fragment.ImageFragment;
 import com.michael.takephoto.fragment.SceneFragment;
 
+import java.io.File;
+
 
 public class ShowActivity extends AppCompatActivity {
     private String IMAGE_PATH_TEMP = android.os.Environment.getExternalStorageDirectory().getPath()
@@ -36,9 +38,9 @@ public class ShowActivity extends AppCompatActivity {
         transaction.commit();
     }
 
-    public void gotoImageFragment(String fileAbsolutePath) {
+    public void gotoImageFragment(File fileDir) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        ImageFragment detailSceneFragment = ImageFragment.newInstance(fileAbsolutePath);
+        ImageFragment detailSceneFragment = ImageFragment.newInstance(fileDir);
         transaction.replace(R.id.show_detial, detailSceneFragment);
         transaction.addToBackStack(null);
         transaction.commit();

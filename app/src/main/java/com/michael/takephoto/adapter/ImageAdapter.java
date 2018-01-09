@@ -5,6 +5,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -35,9 +37,26 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.MyViewHolder
     private ImageAdapter.OnItemClickLitener mOnItemClickLitener;
     private ACache mCache;
     private Gson mGson;
+    private Handler mHandler;
 
 
     public ImageAdapter(Context context, List<File> Data) {
+        this.mDatas = Data;
+        this.mContext = context;
+        this.mGson = new Gson();
+        mHeights = new ArrayList<Integer>();
+        try {
+            mCache = ACache.get(mContext);
+        } catch (Exception e) {
+            //子线程未销毁可能时执行
+        }
+        for (int i = 0; i < mDatas.size(); i++) {
+            mHeights.add(300);
+        }
+    }
+
+    public ImageAdapter(Context context, List<File> Data, Handler mHandler) {
+        this.mHandler = mHandler;
         this.mDatas = Data;
         this.mContext = context;
         this.mGson = new Gson();
@@ -146,6 +165,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.MyViewHolder
                     }
                 }
             });
+
+            holder.tv_name.setText(FileUtils.getFileNameNoExtension(mDatas.get(holder.getAdapterPosition())));
         }
 
     }
@@ -238,6 +259,9 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.MyViewHolder
             String s = String.valueOf(i);
             mCache.put(s, strings.get(i), ACache.TIME_DAY);
         }
+        Message message = Message.obtain();
+        message.what = 1;
+        mHandler.sendMessage(message);
     }
 
     public interface OnItemClickLitener {
@@ -257,7 +281,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.MyViewHolder
             tv = (ImageView) view.findViewById(R.id.id_num);
             item_image_delete = (TextView) view.findViewById(R.id.item_image_delete);
             tv_name = (TextView) view.findViewById(R.id.tv_name);
-            tv_name.setVisibility(View.GONE);
         }
     }
 }

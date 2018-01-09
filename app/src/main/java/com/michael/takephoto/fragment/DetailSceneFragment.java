@@ -81,7 +81,7 @@ public class DetailSceneFragment extends Fragment {
                         public void onItemClick(View view, int position) {
                             File file = mFiles.get(position);
                             Log.e("jbjb",file.getAbsolutePath());
-                            ((ShowActivity) getActivity()).gotoImageFragment(file.getAbsolutePath());
+                            ((ShowActivity) getActivity()).gotoImageFragment(file);
                         }
 
                         @Override

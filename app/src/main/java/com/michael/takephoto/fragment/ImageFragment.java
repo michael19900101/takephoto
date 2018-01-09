@@ -1,7 +1,6 @@
 package com.michael.takephoto.fragment;
 
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -26,18 +25,18 @@ import android.widget.Toast;
 import com.blankj.utilcode.utils.FileUtils;
 import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
-import com.michael.takephoto.BuildConfig;
 import com.michael.takephoto.R;
 import com.michael.takephoto.adapter.ImageAdapter;
 import com.michael.takephoto.util.ACache;
+import com.michael.takephoto.util.AppSharePreferenceMgr;
 import com.michael.takephoto.util.SelectPath;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 
 /**
@@ -56,12 +55,18 @@ public class ImageFragment extends Fragment {
     private static final int PHOTO_TAKEN = 1111;       //拍照
     private static String IMAGE_PATH_TEMP = "";
     private TextView tvNodata;
+    private static String FILE_NAME = "";
+    private static int MAX_PHOTOS = -1;
 
-    public static ImageFragment newInstance(String fileAbsolutePath) {
+    public static ImageFragment newInstance(File fileDir) {
         ImageFragment fragment = new ImageFragment();
         Bundle args = new Bundle();
-        args.putString("param", fileAbsolutePath);
-        IMAGE_PATH_TEMP = fileAbsolutePath + "/";
+        args.putString("param", fileDir.getAbsolutePath());
+        IMAGE_PATH_TEMP = fileDir.getAbsolutePath() + "/";
+        FILE_NAME = fileDir.getName();
+        if("无线环境照片".equals(FILE_NAME)){
+            MAX_PHOTOS = 12;
+        }
         fragment.setArguments(args);
         return fragment;
     }
@@ -70,7 +75,12 @@ public class ImageFragment extends Fragment {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case 1:
-                    mRecyclerView.setAdapter(mAdapter = new ImageAdapter(getContext(), mFiles));
+                    mRecyclerView.setAdapter(mAdapter = new ImageAdapter(getContext(), mFiles,myHandler));
+                    if(MAX_PHOTOS != -1 &&  mFiles.size() == MAX_PHOTOS){
+                        fabAddPhoto.setVisibility(View.GONE);
+                    }else {
+                        fabAddPhoto.setVisibility(View.VISIBLE);
+                    }
                     if(mFiles.size() == 0){
                         tvNodata.setVisibility(View.VISIBLE);
                     }else {
@@ -140,13 +150,8 @@ public class ImageFragment extends Fragment {
 
     private void startCamera() {
         try {
-            File directory = new File(IMAGE_PATH_TEMP);
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
-            File picFile;
-            mPhotoPath = IMAGE_PATH_TEMP + UUID.randomUUID() + ".jpeg";
-            picFile = new File(mPhotoPath);
+            mPhotoPath = getNewPhotoPath();
+            File picFile = new File(mPhotoPath);
             if (!picFile.exists()) {
                 picFile.createNewFile();
             }
@@ -159,6 +164,49 @@ public class ImageFragment extends Fragment {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private String getWireLessFileName(){
+        String[] numArrays = getResources().getStringArray(R.array.wireless_num);
+        List<String> nums = new ArrayList<>();
+        for(String name:numArrays){
+            nums.add(FILE_NAME + name);
+        }
+        List<String> fileNames = new ArrayList<>();
+        List<String> diffList = new ArrayList<>();
+        if(mFiles.size() == 0){
+            return nums.get(0);
+        }else {
+            for(File file:mFiles){
+                String fileName = FileUtils.getFileNameNoExtension(file);
+                fileNames.add(fileName);
+            }
+            for(String item:nums){
+                if(!fileNames.contains(item)){
+                    diffList.add(item);
+                }
+            }
+        }
+        return diffList.get(0);
+    }
+
+    private String getNewPhotoPath(){
+        String path = "";
+        if("无线环境照片".equals(FILE_NAME)){
+            String name = getWireLessFileName();
+            path = IMAGE_PATH_TEMP + name + ".jpeg";
+        }else {
+            int maxNum = (int)AppSharePreferenceMgr.get(getContext(),FILE_NAME,0);
+            File directory = new File(IMAGE_PATH_TEMP);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            maxNum += 1;
+            AppSharePreferenceMgr.put(getContext(),FILE_NAME, maxNum);
+            path = IMAGE_PATH_TEMP + FILE_NAME + maxNum + ".jpeg";
+        }
+
+        return path;
     }
 
     @Override
@@ -227,62 +275,6 @@ public class ImageFragment extends Fragment {
                 myHandler.sendMessage(message);
             }
         }).start();
-    }
-
-    /**
-     * 判断缓存是否存在，初始化数据
-     */
-    private void judge() {
-        try {
-            mPreferences = getContext().getSharedPreferences("table", Context.MODE_PRIVATE);
-        } catch (Exception e) {
-            //子线程未销毁可能时执行
-        }
-        boolean first = mPreferences.getBoolean("firstImage", true);
-        int num = mPreferences.getInt("numImage", 0);
-
-        long time = mPreferences.getLong("ImageTime", 0);
-        long cha = System.currentTimeMillis() - time;
-        //判断缓存时间是否过期
-
-        if (!first && time != 0 & cha < 86400000) {
-            for (int i = 0; i < num; i++) {
-                String s = String.valueOf(i);
-                String string = mCatch.getAsString(s);
-                if (string!=null) {
-                    File file = mGson.fromJson(string, File.class);
-                    mFiles.add(file);
-                }
-
-            }
-        } else {
-
-            mFiles = FileUtils.listFilesInDirWithFilter(IMAGE_PATH_TEMP, ".jpg");
-            addCatch();
-        }
-    }
-
-    /**
-     * 添加缓存
-     */
-    public void addCatch() {
-
-        ArrayList<String> strings = new ArrayList<>();
-        for (int i = 0; i < mFiles.size(); i++) {
-            String s = mGson.toJson(mFiles.get(i));
-            strings.add(s);
-        }
-        for (int i = 0; i < strings.size(); i++) {
-            String s = String.valueOf(i);
-            mCatch.put(s, strings.get(i), ACache.TIME_DAY);
-        }
-
-
-        SharedPreferences.Editor edit = mPreferences.edit();
-        edit.putBoolean("firstImage", false);
-        edit.putInt("numImage", strings.size());
-        edit.putLong("ImageTime", System.currentTimeMillis());
-        edit.commit();
     }
 
 }
