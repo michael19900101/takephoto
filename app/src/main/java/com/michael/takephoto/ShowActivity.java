@@ -6,7 +6,6 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 
-import com.blankj.utilcode.utils.FileUtils;
 import com.michael.takephoto.fragment.DetailSceneFragment;
 import com.michael.takephoto.fragment.ImageFragment;
 import com.michael.takephoto.fragment.SceneFragment;
@@ -15,15 +14,11 @@ import java.io.File;
 
 
 public class ShowActivity extends AppCompatActivity {
-    private String IMAGE_PATH_TEMP = android.os.Environment.getExternalStorageDirectory().getPath()
-            + "/" + BuildConfig.APPLICATION_ID + "/Scene/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_show);
-
-        FileUtils.createOrExistsDir(IMAGE_PATH_TEMP);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(R.id.show_detial, new SceneFragment());
         transaction.addToBackStack(null);
