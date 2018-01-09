@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">pai照</string>
+　　    <string-array name="file">
+　　        <item>天面照片</item>
+　　        <item>无线环境照片</item>
+　　        <item>机房照片</item>
+　　        <item>楼宇照片</item>
+　　        <item>门牌照片</item>
+　　    </string-array>
+</resources>

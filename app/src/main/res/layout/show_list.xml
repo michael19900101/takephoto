@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    >
+
+    <ImageView
+        android:id="@+id/loading_gif"
+        android:layout_centerInParent="true"
+        android:layout_height="150dp"
+        android:layout_width="200dp"
+        android:scaleType="fitXY"
+        />
+
+    <TextView
+        android:id="@+id/loading_text"
+        android:layout_below="@id/loading_gif"
+        android:layout_centerHorizontal="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="正在扫描磁盘，请稍后..."
+        android:textColor="@color/textColor"
+        android:textSize="12sp"
+        />
+
+    <TextView
+        android:id="@+id/tv_nodata"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:visibility="gone"
+        android:text="暂无数据"/>
+
+    <android.support.v7.widget.RecyclerView
+        android:background="@color/backGround"
+        android:dividerHeight="10dp"
+        android:id="@+id/id_recyclerview"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:paddingLeft="7dp"
+        android:paddingRight="7dp"/>
+
+    <GridView
+        android:id="@+id/noScrollgridview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:horizontalSpacing="3dp"
+        android:numColumns="4"
+        android:scrollbars="none"
+        android:verticalSpacing="5dp">
+    </GridView>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_add_photo"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/icon_addpic_unfocused"
+        app:backgroundTint="#30469b"
+        app:borderWidth="0dp"
+        app:elevation="6dp"
+        app:fabSize="normal"
+        app:layout_anchorGravity="bottom|right"
+        app:pressedTranslationZ="12dp"
+        app:rippleColor="#a6a6a6" />
+
+</RelativeLayout>
