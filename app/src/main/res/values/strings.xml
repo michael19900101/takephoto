@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">pai照</string>
+    <string name="app_name">勘察工具</string>
 　　    <string-array name="file">
 　　        <item>天面照片</item>
 　　        <item>无线环境照片</item>

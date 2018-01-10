@@ -56,4 +56,25 @@ public class SelectPath {
 
 		return bitmap;
 	}
+
+	/**
+	 * 获取缩略图
+	 *
+	 * @param path 图片路径
+	 */
+	public static Bitmap revitionImageSize(String path,int inSampleSize) throws IOException {
+		int degree = ImageManager.readPictureDegree(path);      //读取图片旋转
+
+		BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inSampleSize = inSampleSize;
+		options.inJustDecodeBounds = false;
+		options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+		Bitmap bitmap = BitmapFactory.decodeFile(path, options);
+
+		Matrix matrix = new Matrix();
+		matrix.setRotate(degree);
+		bitmap = Bitmap.createBitmap(bitmap, 0, 0, options.outWidth, options.outHeight, matrix, true);
+
+		return bitmap;
+	}
 }

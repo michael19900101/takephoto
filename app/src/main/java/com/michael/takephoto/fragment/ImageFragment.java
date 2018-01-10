@@ -35,7 +35,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
@@ -57,18 +56,29 @@ public class ImageFragment extends Fragment {
     private TextView tvNodata;
     private static String FILE_NAME = "";
     private static int MAX_PHOTOS = -1;
+    private static String SCENE_FILE_NAME = "";
 
     public static ImageFragment newInstance(File fileDir) {
         ImageFragment fragment = new ImageFragment();
         Bundle args = new Bundle();
         args.putString("param", fileDir.getAbsolutePath());
+        setSceneFileName(fileDir);
         IMAGE_PATH_TEMP = fileDir.getAbsolutePath() + "/";
         FILE_NAME = fileDir.getName();
-        if("无线环境照片".equals(FILE_NAME)){
+        FILE_NAME = FILE_NAME.split("片")[0];
+        if("无线环境照片".contains(FILE_NAME)){
             MAX_PHOTOS = 12;
         }
         fragment.setArguments(args);
         return fragment;
+    }
+
+    private static void setSceneFileName(File fileDir){
+        String ss = fileDir.getAbsolutePath();
+        String tmp = ss.substring(0,ss.lastIndexOf("/"));
+        tmp = tmp.substring(0,tmp.lastIndexOf("/"));
+        String[] result = ss.split(tmp);
+        SCENE_FILE_NAME = result[1];
     }
 
     private Handler myHandler = new Handler() {
@@ -192,17 +202,17 @@ public class ImageFragment extends Fragment {
 
     private String getNewPhotoPath(){
         String path = "";
-        if("无线环境照片".equals(FILE_NAME)){
+        if("无线环境照片".contains(FILE_NAME)){
             String name = getWireLessFileName();
             path = IMAGE_PATH_TEMP + name + ".jpeg";
         }else {
-            int maxNum = (int)AppSharePreferenceMgr.get(getContext(),FILE_NAME,0);
+            int maxNum = (int)AppSharePreferenceMgr.get(getContext(),SCENE_FILE_NAME,0);
             File directory = new File(IMAGE_PATH_TEMP);
             if (!directory.exists()) {
                 directory.mkdirs();
             }
             maxNum += 1;
-            AppSharePreferenceMgr.put(getContext(),FILE_NAME, maxNum);
+            AppSharePreferenceMgr.put(getContext(),SCENE_FILE_NAME, maxNum);
             path = IMAGE_PATH_TEMP + FILE_NAME + maxNum + ".jpeg";
         }
 
@@ -219,8 +229,8 @@ public class ImageFragment extends Fragment {
                 @Override
                 public void run() {
                     try {
-                        Bitmap bitmap = SelectPath.revitionImageSize(mPhotoPath);
-                        saveBitmap(bitmap, mPhotoPath);
+                        Bitmap bitmap = SelectPath.revitionImageSize(mPhotoPath,1);
+                        saveBitmap(bitmap, mPhotoPath,80);
                         mFiles = FileUtils.listFilesInDirWithFilter(IMAGE_PATH_TEMP, ".jpeg");
                         Message message = Message.obtain();
                         message.what = 1;
@@ -246,14 +256,14 @@ public class ImageFragment extends Fragment {
      *
      *
      */
-    public void saveBitmap(Bitmap bitmap, String path) {
+    public void saveBitmap(Bitmap bitmap, String path,int quality) {
         File mImgFile = new File(path);
         if (mImgFile != null && mImgFile.exists()) {
             mImgFile.delete();
         }
         try {
             FileOutputStream fos = new FileOutputStream(mImgFile);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fos);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, fos);
             fos.flush();
             fos.close();
         } catch (Exception e) {
