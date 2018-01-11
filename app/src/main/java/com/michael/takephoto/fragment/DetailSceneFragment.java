@@ -6,11 +6,9 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -33,6 +31,7 @@ import com.michael.takephoto.BuildConfig;
 import com.michael.takephoto.R;
 import com.michael.takephoto.ShowActivity;
 import com.michael.takephoto.adapter.DetailSceneAdapter;
+import com.michael.takephoto.threadpool.ThreadTaskObject;
 import com.michael.takephoto.util.SelectPath;
 
 import java.io.File;
@@ -40,7 +39,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 
 /**
@@ -173,8 +171,7 @@ public class DetailSceneFragment extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
         // 拍照结果
         if (requestCode == PHOTO_TAKEN && resultCode != 0) {
-            new Thread(new Runnable() {
-
+            new ThreadTaskObject() {
                 @Override
                 public void run() {
                     try {
@@ -196,7 +193,7 @@ public class DetailSceneFragment extends Fragment {
                     }
 
                 }
-            }).start();
+            }.start();
         }
     }
 
@@ -222,9 +219,7 @@ public class DetailSceneFragment extends Fragment {
 
     private void initData() {
         //开线程初始化数据
-
-        new Thread(new Runnable() {
-
+        new ThreadTaskObject() {
             @Override
             public void run() {
                 mFiles = FileUtils.listFilesInDir(IMAGE_PATH_TEMP,false);
@@ -232,7 +227,7 @@ public class DetailSceneFragment extends Fragment {
                 message.what = 1;
                 myHandler.sendMessage(message);
             }
-        }).start();
+        }.start();
     }
 
 

@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -31,6 +30,7 @@ import com.michael.takephoto.BuildConfig;
 import com.michael.takephoto.R;
 import com.michael.takephoto.ShowActivity;
 import com.michael.takephoto.adapter.SceneAdapter;
+import com.michael.takephoto.threadpool.ThreadTaskObject;
 import com.michael.takephoto.util.SelectPath;
 
 import java.io.File;
@@ -185,8 +185,7 @@ public class SceneFragment extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
         // 拍照结果
         if (requestCode == PHOTO_TAKEN && resultCode != 0) {
-            new Thread(new Runnable() {
-
+            new ThreadTaskObject() {
                 @Override
                 public void run() {
                     try {
@@ -206,9 +205,9 @@ public class SceneFragment extends Fragment {
                         e.printStackTrace();
                         Toast.makeText(getContext(), "添加照片失败！", Toast.LENGTH_SHORT).show();
                     }
-
                 }
-            }).start();
+            }.start();
+
         }
     }
 
@@ -235,8 +234,7 @@ public class SceneFragment extends Fragment {
     private void initData() {
         //开线程初始化数据
 
-        new Thread(new Runnable() {
-
+        new ThreadTaskObject() {
             @Override
             public void run() {
                 mFiles = FileUtils.listFilesInDir(IMAGE_PATH_TEMP,false);
@@ -244,7 +242,7 @@ public class SceneFragment extends Fragment {
                 message.what = 1;
                 myHandler.sendMessage(message);
             }
-        }).start();
+        }.start();
     }
 
 

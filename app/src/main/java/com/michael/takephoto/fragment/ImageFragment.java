@@ -27,6 +27,7 @@ import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.michael.takephoto.R;
 import com.michael.takephoto.adapter.ImageAdapter;
+import com.michael.takephoto.threadpool.ThreadTaskObject;
 import com.michael.takephoto.util.ACache;
 import com.michael.takephoto.util.AppSharePreferenceMgr;
 import com.michael.takephoto.util.SelectPath;
@@ -224,8 +225,7 @@ public class ImageFragment extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
         // 拍照结果
         if (requestCode == PHOTO_TAKEN && resultCode != 0) {
-            new Thread(new Runnable() {
-
+            new ThreadTaskObject() {
                 @Override
                 public void run() {
                     try {
@@ -245,9 +245,8 @@ public class ImageFragment extends Fragment {
                         e.printStackTrace();
                         Toast.makeText(getContext(), "添加照片失败！", Toast.LENGTH_SHORT).show();
                     }
-
                 }
-            }).start();
+            }.start();
         }
     }
 
@@ -274,17 +273,15 @@ public class ImageFragment extends Fragment {
     private void initData() {
         //开线程初始化数据
 
-        new Thread(new Runnable() {
-
+        new ThreadTaskObject() {
             @Override
             public void run() {
-//                judge();
                 mFiles = FileUtils.listFilesInDirWithFilter(IMAGE_PATH_TEMP, ".jpeg");
                 Message message = new Message();
                 message.what = 1;
                 myHandler.sendMessage(message);
             }
-        }).start();
+        }.start();
     }
 
 }
