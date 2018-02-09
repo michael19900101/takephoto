@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -27,6 +28,7 @@ import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 import com.michael.takephoto.R;
 import com.michael.takephoto.adapter.ImageAdapter;
+import com.michael.takephoto.camera.CameraActivity;
 import com.michael.takephoto.threadpool.ThreadTaskObject;
 import com.michael.takephoto.util.ACache;
 import com.michael.takephoto.util.AppSharePreferenceMgr;
@@ -58,6 +60,7 @@ public class ImageFragment extends Fragment {
     private static String FILE_NAME = "";
     private static int MAX_PHOTOS = -1;
     private static String SCENE_FILE_NAME = "";
+    private static final int CUSTOM_PHOTO_TAKEN = 1112;  //自定义相机返回
 
     public static ImageFragment newInstance(File fileDir) {
         ImageFragment fragment = new ImageFragment();
@@ -150,7 +153,12 @@ public class ImageFragment extends Fragment {
         fabAddPhoto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startCamera();
+                // 5.0以下的手机系统调用系统相机，5.0以上的系统调用自定义相机
+                if(Integer.valueOf(Build.VERSION.SDK) < Build.VERSION_CODES.LOLLIPOP){
+                    startCamera();
+                }else {
+                    jumpToCameraActivity();
+                }
             }
         });
 
@@ -175,6 +183,15 @@ public class ImageFragment extends Fragment {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void jumpToCameraActivity(){
+        Intent intent = new Intent(getActivity(),CameraActivity.class);
+        intent.putExtra("FILE_NAME",FILE_NAME);
+        intent.putExtra("IMAGE_PATH_TEMP",IMAGE_PATH_TEMP);
+        intent.putExtra("SCENE_FILE_NAME",SCENE_FILE_NAME);
+        intent.putExtra("WIRELESS_FILE_NAME",getWireLessFileName());
+        startActivityForResult(intent,CUSTOM_PHOTO_TAKEN);
     }
 
     private String getWireLessFileName(){
@@ -224,13 +241,45 @@ public class ImageFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         // 拍照结果
-        if (requestCode == PHOTO_TAKEN && resultCode != 0) {
+        if (requestCode == PHOTO_TAKEN) {
+            if(resultCode != 0){
+                new ThreadTaskObject() {
+                    @Override
+                    public void run() {
+                        try {
+                            Bitmap bitmap = SelectPath.revitionImageSize(mPhotoPath,1);
+                            saveBitmap(bitmap, mPhotoPath,80);
+                            mFiles = FileUtils.listFilesInDirWithFilter(IMAGE_PATH_TEMP, ".jpeg");
+                            Message message = Message.obtain();
+                            message.what = 1;
+                            myHandler.sendMessage(message);
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getContext(), "添加照片成功！", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getContext(), "添加照片失败！", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }.start();
+            }else {
+                FileUtils.deleteFile(mPhotoPath);
+                int maxNum = (int)AppSharePreferenceMgr.get(getContext(),SCENE_FILE_NAME,0);
+                if(maxNum != 0){
+                    maxNum -= 1;
+                    AppSharePreferenceMgr.put(getContext(),SCENE_FILE_NAME, maxNum);
+                }
+            }
+
+        }
+        if (requestCode == CUSTOM_PHOTO_TAKEN) {
             new ThreadTaskObject() {
                 @Override
                 public void run() {
                     try {
-                        Bitmap bitmap = SelectPath.revitionImageSize(mPhotoPath,1);
-                        saveBitmap(bitmap, mPhotoPath,80);
                         mFiles = FileUtils.listFilesInDirWithFilter(IMAGE_PATH_TEMP, ".jpeg");
                         Message message = Message.obtain();
                         message.what = 1;
@@ -238,12 +287,11 @@ public class ImageFragment extends Fragment {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(getContext(), "添加照片成功！", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(getContext(), "刷新成功！", Toast.LENGTH_SHORT).show();
                             }
                         });
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
-                        Toast.makeText(getContext(), "添加照片失败！", Toast.LENGTH_SHORT).show();
                     }
                 }
             }.start();

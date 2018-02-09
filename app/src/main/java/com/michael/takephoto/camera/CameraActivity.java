@@ -16,27 +16,51 @@
 
 package com.michael.takephoto.camera;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
 import com.blankj.utilcode.utils.FileUtils;
-import com.michael.takephoto.BuildConfig;
 import com.michael.takephoto.R;
 
 public class CameraActivity extends AppCompatActivity {
-    private String IMAGE_PATH_TEMP = android.os.Environment.getExternalStorageDirectory().getPath()
-            + "/" + BuildConfig.APPLICATION_ID + "/Image2/";
+
+    private String FILE_NAME;
+    private String IMAGE_PATH_TEMP;
+    private String SCENE_FILE_NAME;
+    private String WIRELESS_FILE_NAME;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Intent intent = getIntent();
+        if(intent != null){
+            FILE_NAME = intent.getStringExtra("FILE_NAME");
+            IMAGE_PATH_TEMP = intent.getStringExtra("IMAGE_PATH_TEMP");
+            SCENE_FILE_NAME = intent.getStringExtra("SCENE_FILE_NAME");
+            WIRELESS_FILE_NAME = intent.getStringExtra("WIRELESS_FILE_NAME");
+        }
+
         setContentView(R.layout.activity_camera);
-        boolean flag = FileUtils.createOrExistsDir(IMAGE_PATH_TEMP);
+        FileUtils.createOrExistsDir(IMAGE_PATH_TEMP);
         if (null == savedInstanceState) {
+            Camera2BasicFragment fragment = Camera2BasicFragment.newInstance();
+            Bundle bundle = new Bundle();
+            bundle.putString("FILE_NAME", FILE_NAME);
+            bundle.putString("IMAGE_PATH_TEMP", IMAGE_PATH_TEMP);
+            bundle.putString("SCENE_FILE_NAME", SCENE_FILE_NAME);
+            bundle.putString("WIRELESS_FILE_NAME", WIRELESS_FILE_NAME);
+            fragment.setArguments(bundle);
             getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.container, Camera2BasicFragment.newInstance())
+                    .replace(R.id.container, fragment)
                     .commit();
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        setResult(RESULT_OK);
+        finish();
+    }
 }

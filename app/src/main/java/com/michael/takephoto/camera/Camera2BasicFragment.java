@@ -46,11 +46,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -59,10 +61,12 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.michael.takephoto.BuildConfig;
 import com.michael.takephoto.R;
+import com.michael.takephoto.util.AppSharePreferenceMgr;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -73,14 +77,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class Camera2BasicFragment extends Fragment
-        implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
-
+        implements ActivityCompat.OnRequestPermissionsResultCallback {
     /**
      * Conversion from screen rotation to JPEG orientation.
      */
@@ -237,14 +239,6 @@ public class Camera2BasicFragment extends Fragment
     private ImageReader mImageReader;
 
     /**
-     * This is the output file for our picture.
-     */
-    private File mFile;
-
-    private String IMAGE_PATH_TEMP = android.os.Environment.getExternalStorageDirectory().getPath()
-            + "/" + BuildConfig.APPLICATION_ID + "/Image2/";
-
-    /**
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
      * still image is ready to be saved.
      */
@@ -253,7 +247,9 @@ public class Camera2BasicFragment extends Fragment
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
+            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage()));
+            picNum += 1;
+            setTvPicNum(""+picNum);
         }
 
     };
@@ -375,6 +371,18 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
+    private void setTvPicNum(final String text) {
+        final Activity activity = getActivity();
+        if (activity != null) {
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    tvPicNum.setText(text);
+                }
+            });
+        }
+    }
+
     /**
      * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
      * is at least as large as the respective texture view size, and that is at most as large as the
@@ -428,22 +436,47 @@ public class Camera2BasicFragment extends Fragment
         return new Camera2BasicFragment();
     }
 
+    private String FILE_NAME;
+    private String IMAGE_PATH_TEMP;
+    private String SCENE_FILE_NAME;
+    private String WIRELESS_FILE_NAME;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        FILE_NAME = getArguments().getString("FILE_NAME");
+        IMAGE_PATH_TEMP = getArguments().getString("IMAGE_PATH_TEMP");
+        SCENE_FILE_NAME = getArguments().getString("SCENE_FILE_NAME");
+        WIRELESS_FILE_NAME = getArguments().getString("WIRELESS_FILE_NAME");
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_camera2_basic, container, false);
     }
 
-    @Override
-    public void onViewCreated(final View view, Bundle savedInstanceState) {
-        view.findViewById(R.id.picture).setOnClickListener(this);
-//        view.findViewById(R.id.info).setOnClickListener(this);
-        mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
-    }
+    private TextView tvPicNum;
+    private ImageButton btnTakePhoto;
+    private int picNum;
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+    public void onViewCreated(final View view, Bundle savedInstanceState) {
+        btnTakePhoto = view.findViewById(R.id.picture);
+        btnTakePhoto.setOnClickListener(new NoDoubleClickListener() {
+            @Override
+            public void onNoDoubleClick(View view) {
+                takePicture();
+            }
+        });
+        view.findViewById(R.id.back).setOnClickListener(new NoDoubleClickListener() {
+            @Override
+            public void onNoDoubleClick(View view) {
+                ((CameraActivity)getActivity()).onBackPressed();
+            }
+        });
+        tvPicNum = view.findViewById(R.id.tv_picnum);
+        mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
     }
 
     @Override
@@ -844,10 +877,15 @@ public class Camera2BasicFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    String path = IMAGE_PATH_TEMP + UUID.randomUUID().toString() + ".jpg";
-                    mFile = new File(path);
-                    showToast("Saved: " + mFile);
-                    Log.d(TAG, mFile.toString());
+                    // 拍照完成，先设置1.5秒拍照按钮不可点击，并且不释放焦点，
+                    // 防止多次回调mOnImageAvailableListener，一次保存多张图片
+                    btnTakePhoto.setClickable(false);
+                    try {
+                        Thread.sleep(1500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    btnTakePhoto.setClickable(true);
                     unlockFocus();
                 }
             };
@@ -895,26 +933,6 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
-    @Override
-    public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.picture: {
-                takePicture();
-                break;
-            }
-//            case R.id.info: {
-//                Activity activity = getActivity();
-//                if (null != activity) {
-//                    new AlertDialog.Builder(activity)
-//                            .setMessage(R.string.intro_message)
-//                            .setPositiveButton(android.R.string.ok, null)
-//                            .show();
-//                }
-//                break;
-//            }
-        }
-    }
-
     private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
         if (mFlashSupported) {
             requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
@@ -925,7 +943,7 @@ public class Camera2BasicFragment extends Fragment
     /**
      * Saves a JPEG {@link Image} into the specified {@link File}.
      */
-    private static class ImageSaver implements Runnable {
+    private class ImageSaver implements Runnable {
 
         /**
          * The JPEG image
@@ -934,15 +952,34 @@ public class Camera2BasicFragment extends Fragment
         /**
          * The file we save the image into.
          */
-        private final File mFile;
+        private File mFile ;
 
         ImageSaver(Image image, File file) {
             mImage = image;
             mFile = file;
         }
 
+        ImageSaver(Image image) {
+            mImage = image;
+            mFile = null;
+        }
+
         @Override
         public void run() {
+            String mPhotoPath = getNewPhotoPath();
+            if(TextUtils.isEmpty(mPhotoPath)){
+                return;
+            }
+            mFile = new File(mPhotoPath);
+            if (!mFile.exists()) {
+                try {
+                    mFile.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
             ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
@@ -964,6 +1001,27 @@ public class Camera2BasicFragment extends Fragment
             }
         }
 
+    }
+
+    private String getNewPhotoPath(){
+        String path = "";
+        if(TextUtils.isEmpty(FILE_NAME)){
+            return "";
+        }
+        if("无线环境照片".contains(FILE_NAME)){
+            path = IMAGE_PATH_TEMP + WIRELESS_FILE_NAME + ".jpeg";
+        }else {
+            int maxNum = (int) AppSharePreferenceMgr.get(getContext(),SCENE_FILE_NAME,0);
+            File directory = new File(IMAGE_PATH_TEMP);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            maxNum += 1;
+            AppSharePreferenceMgr.put(getContext(),SCENE_FILE_NAME, maxNum);
+            path = IMAGE_PATH_TEMP + FILE_NAME + maxNum + ".jpeg";
+        }
+
+        return path;
     }
 
     /**
