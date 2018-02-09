@@ -58,7 +58,7 @@ public class ShowActivity extends AppCompatActivity {
 
     public void popBackStack(){
         FragmentManager fragmentManager = getSupportFragmentManager();
-        if (fragmentManager.getBackStackEntryCount()>0){
+        if (fragmentManager.getBackStackEntryCount() > 1){
             fragmentManager.popBackStack();
         }else {
             finish();
