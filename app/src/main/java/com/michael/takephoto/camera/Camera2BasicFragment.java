@@ -65,8 +65,13 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.blankj.utilcode.utils.FileUtils;
 import com.michael.takephoto.R;
 import com.michael.takephoto.util.AppSharePreferenceMgr;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -439,15 +444,26 @@ public class Camera2BasicFragment extends Fragment
     private String FILE_NAME;
     private String IMAGE_PATH_TEMP;
     private String SCENE_FILE_NAME;
-    private String WIRELESS_FILE_NAME;
+    private List<File> mFiles;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EventBus.getDefault().register(this);
         FILE_NAME = getArguments().getString("FILE_NAME");
         IMAGE_PATH_TEMP = getArguments().getString("IMAGE_PATH_TEMP");
         SCENE_FILE_NAME = getArguments().getString("SCENE_FILE_NAME");
-        WIRELESS_FILE_NAME = getArguments().getString("WIRELESS_FILE_NAME");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onMessageEvent1(List<File> mFiles) {
+        this.mFiles = mFiles;
     }
 
     @Override
@@ -807,8 +823,17 @@ public class Camera2BasicFragment extends Fragment
     /**
      * Initiate a still image capture.
      */
+    private static int MAX_PHOTOS = -1;
+
     private void takePicture() {
-        lockFocus();
+        if("无线环境照片".contains(FILE_NAME)){
+            MAX_PHOTOS = 12;
+        }
+        if(MAX_PHOTOS != -1 &&  mFiles.size() == MAX_PHOTOS){
+            Toast.makeText(getContext(),"无线环境照片只拍"+MAX_PHOTOS+"张！",Toast.LENGTH_SHORT).show();
+        }else {
+            lockFocus();
+        }
     }
 
     /**
@@ -974,6 +999,7 @@ public class Camera2BasicFragment extends Fragment
             if (!mFile.exists()) {
                 try {
                     mFile.createNewFile();
+                    mFiles.add(mFile);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -1009,7 +1035,8 @@ public class Camera2BasicFragment extends Fragment
             return "";
         }
         if("无线环境照片".contains(FILE_NAME)){
-            path = IMAGE_PATH_TEMP + WIRELESS_FILE_NAME + ".jpeg";
+            String name = getWireLessFileName();
+            path = IMAGE_PATH_TEMP + name + ".jpeg";
         }else {
             int maxNum = (int) AppSharePreferenceMgr.get(getContext(),SCENE_FILE_NAME,0);
             File directory = new File(IMAGE_PATH_TEMP);
@@ -1022,6 +1049,30 @@ public class Camera2BasicFragment extends Fragment
         }
 
         return path;
+    }
+
+    private String getWireLessFileName(){
+        String[] numArrays = getResources().getStringArray(R.array.wireless_num);
+        List<String> nums = new ArrayList<>();
+        for(String name:numArrays){
+            nums.add(FILE_NAME + name);
+        }
+        List<String> fileNames = new ArrayList<>();
+        List<String> diffList = new ArrayList<>();
+        if(mFiles.size() == 0){
+            return nums.get(0);
+        }else {
+            for(File file:mFiles){
+                String fileName = FileUtils.getFileNameNoExtension(file);
+                fileNames.add(fileName);
+            }
+            for(String item:nums){
+                if(!fileNames.contains(item)){
+                    diffList.add(item);
+                }
+            }
+        }
+        return diffList.get(0);
     }
 
     /**

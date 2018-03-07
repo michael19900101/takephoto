@@ -34,6 +34,8 @@ import com.michael.takephoto.util.ACache;
 import com.michael.takephoto.util.AppSharePreferenceMgr;
 import com.michael.takephoto.util.SelectPath;
 
+import org.greenrobot.eventbus.EventBus;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -185,12 +187,17 @@ public class ImageFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        EventBus.getDefault().post(mFiles);
+    }
+
     private void jumpToCameraActivity(){
         Intent intent = new Intent(getActivity(),CameraActivity.class);
         intent.putExtra("FILE_NAME",FILE_NAME);
         intent.putExtra("IMAGE_PATH_TEMP",IMAGE_PATH_TEMP);
         intent.putExtra("SCENE_FILE_NAME",SCENE_FILE_NAME);
-        intent.putExtra("WIRELESS_FILE_NAME",getWireLessFileName());
         startActivityForResult(intent,CUSTOM_PHOTO_TAKEN);
     }
 
