@@ -820,16 +820,14 @@ public class Camera2BasicFragment extends Fragment
         mTextureView.setTransform(matrix);
     }
 
+
+    private static int MAX_PHOTOS = 12;
+
     /**
      * Initiate a still image capture.
      */
-    private static int MAX_PHOTOS = -1;
-
     private void takePicture() {
-        if("无线环境照片".contains(FILE_NAME)){
-            MAX_PHOTOS = 12;
-        }
-        if(MAX_PHOTOS != -1 &&  mFiles.size() == MAX_PHOTOS){
+        if("无线环境照片".contains(FILE_NAME) && mFiles.size() == MAX_PHOTOS){
             Toast.makeText(getContext(),"无线环境照片只拍"+MAX_PHOTOS+"张！",Toast.LENGTH_SHORT).show();
         }else {
             lockFocus();
@@ -902,11 +900,11 @@ public class Camera2BasicFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    // 拍照完成，先设置1.5秒拍照按钮不可点击，并且不释放焦点，
+                    // 拍照完成，先设置0.5秒拍照按钮不可点击，并且不释放焦点，
                     // 防止多次回调mOnImageAvailableListener，一次保存多张图片
                     btnTakePhoto.setClickable(false);
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(500);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
