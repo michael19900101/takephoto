@@ -3,19 +3,14 @@ package com.michael.takephoto.fragment;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,12 +26,10 @@ import com.michael.takephoto.BuildConfig;
 import com.michael.takephoto.R;
 import com.michael.takephoto.ShowActivity;
 import com.michael.takephoto.adapter.DetailSceneAdapter;
-import com.michael.takephoto.threadpool.ThreadTaskObject;
-import com.michael.takephoto.util.SelectPath;
+import com.michael.takephoto.mvp.presenter.DetailScenePresenter;
+import com.michael.takephoto.mvp.view.DetailSceneView;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +37,7 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class DetailSceneFragment extends Fragment {
+public class DetailSceneFragment extends Fragment implements DetailSceneView{
     private RecyclerView mRecyclerView;
     private List<File> mFiles;
     private DetailSceneAdapter mAdapter;
@@ -55,6 +48,7 @@ public class DetailSceneFragment extends Fragment {
     private FloatingActionButton fabAddPhoto;
     private static final int PHOTO_TAKEN = 1111;       //拍照
     private static String IMAGE_PATH_TEMP = "";
+    private DetailScenePresenter detailScenePresenter;
 
     public static DetailSceneFragment newInstance(String fileName) {
         DetailSceneFragment fragment = new DetailSceneFragment();
@@ -64,38 +58,6 @@ public class DetailSceneFragment extends Fragment {
                 + "/" + BuildConfig.APPLICATION_ID + "/Scene/" + fileName;
         fragment.setArguments(args);
         return fragment;
-    }
-
-    private Handler myHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case 1:
-                    mRecyclerView.setAdapter(mAdapter = new DetailSceneAdapter(getContext(), mFiles));
-                    mLoading.setVisibility(View.INVISIBLE);
-                    mLoadingText.setVisibility(View.INVISIBLE);
-                    mRecyclerView.setItemAnimator(new DefaultItemAnimator());
-                    mAdapter.setOnItemClickLitener(new DetailSceneAdapter.OnItemClickLitener() {
-                        @Override
-                        public void onItemClick(View view, int position) {
-                            File file = mFiles.get(position);
-                            Log.e("jbjb",file.getAbsolutePath());
-                            ((ShowActivity) getActivity()).gotoImageFragment(file);
-                        }
-
-                        @Override
-                        public void onItemLongClick(View view, int position) {
-                        }
-                    });
-                    break;
-            }
-            super.handleMessage(msg);
-        }
-    };
-    private String mPhotoPath;
-
-
-    public DetailSceneFragment() {
-        // Required empty public constructor
     }
 
     @Override
@@ -131,8 +93,14 @@ public class DetailSceneFragment extends Fragment {
         });
 
         mRecyclerView.setLayoutManager(new StaggeredGridLayoutManager(3, StaggeredGridLayoutManager.VERTICAL));
-        initData();
+        detailScenePresenter = new DetailScenePresenter(IMAGE_PATH_TEMP,this);
         return ret;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        detailScenePresenter.initData();
     }
 
     private void addDetailScene(){
@@ -154,7 +122,7 @@ public class DetailSceneFragment extends Fragment {
                                 boolean result = FileUtils.createOrExistsDir(fileDir);
                                 if(result){
                                     Toast.makeText(getContext(), "创建场所成功！", Toast.LENGTH_SHORT).show();
-                                    initData();
+                                    detailScenePresenter.initData();
                                 }else {
                                     Toast.makeText(getContext(), "创建场所失败！", Toast.LENGTH_SHORT).show();
                                 }
@@ -166,69 +134,38 @@ public class DetailSceneFragment extends Fragment {
                 .show();
     }
 
+
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        // 拍照结果
-        if (requestCode == PHOTO_TAKEN && resultCode != 0) {
-            new ThreadTaskObject() {
-                @Override
-                public void run() {
-                    try {
-                        Bitmap bitmap = SelectPath.revitionImageSize(mPhotoPath);
-                        saveBitmap(bitmap, mPhotoPath);
-                        mFiles = FileUtils.listFilesInDirWithFilter(IMAGE_PATH_TEMP, ".jpeg");
-                        Message message = Message.obtain();
-                        message.what = 1;
-                        myHandler.sendMessage(message);
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(getContext(), "添加照片成功！", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Toast.makeText(getContext(), "添加照片失败！", Toast.LENGTH_SHORT).show();
-                    }
-
-                }
-            }.start();
-        }
+    public void showLoading() {
+        mLoading.setVisibility(View.VISIBLE);
+        mLoadingText.setVisibility(View.VISIBLE);
     }
 
-    /**
-     * 保存下压缩的图片
-     *
-     *
-     */
-    public void saveBitmap(Bitmap bitmap, String path) {
-        File mImgFile = new File(path);
-        if (mImgFile != null && mImgFile.exists()) {
-            mImgFile.delete();
-        }
-        try {
-            FileOutputStream fos = new FileOutputStream(mImgFile);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, fos);
-            fos.flush();
-            fos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    @Override
+    public void hideLoading() {
+        mLoading.setVisibility(View.INVISIBLE);
+        mLoadingText.setVisibility(View.INVISIBLE);
     }
 
-    private void initData() {
-        //开线程初始化数据
-        new ThreadTaskObject() {
+    @Override
+    public void setDatas(final List<File> files) {
+        mRecyclerView.setAdapter(mAdapter = new DetailSceneAdapter(getContext(), files));
+        mRecyclerView.setItemAnimator(new DefaultItemAnimator());
+        mAdapter.setOnItemClickLitener(new DetailSceneAdapter.OnItemClickLitener() {
             @Override
-            public void run() {
-                mFiles = FileUtils.listFilesInDir(IMAGE_PATH_TEMP,false);
-                Message message = new Message();
-                message.what = 1;
-                myHandler.sendMessage(message);
+            public void onItemClick(View view, int position) {
+                File file = files.get(position);
+                ((ShowActivity) getActivity()).gotoImageFragment(file);
             }
-        }.start();
+
+            @Override
+            public void onItemLongClick(View view, int position) {
+            }
+        });
     }
 
+    @Override
+    public void showMessage(String message) {
 
+    }
 }

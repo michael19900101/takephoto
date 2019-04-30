@@ -26,5 +26,7 @@
         <item name="android:gravity">center</item>
         <item name="android:textColor">#fff</item>
     </style>
-
+    <style name="MaterialTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+    </style>
 </resources>
